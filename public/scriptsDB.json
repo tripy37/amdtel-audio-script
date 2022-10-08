@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Peter Pan",
+    "Author": "JM Barry",
+    "script": "https://res.cloudinary.com/amdtel/raw/upload/audio-auditions/peter-pan.json"
+  },
+  {
+    "title": "Aladdin",
+    "Author": "Ben Crocker",
+    "script": "https://res.cloudinary.com/amdtel/raw/upload/audio-auditions/Aladdin.json"
+  }
+]
