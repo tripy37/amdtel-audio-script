@@ -15,7 +15,7 @@ export class ScriptControl extends LitElement {
       css`
         section {
           display: grid;
-          grid-template-columns: 20vw 40vw 40vw;
+          grid-template-columns: 1fr 2fr 2fr;
         }
         select {
           height: 5vh;

@@ -13,8 +13,8 @@ export class ScriptView extends LitElement {
       css`
         section {
           display: grid;
-          grid-template-columns: 50vw 50vw;
-          grid-template-rows: 60vh 20vh;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 70vh 5vh;
         }
         .lines {
           grid-column: 1/3;
