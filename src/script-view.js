@@ -17,20 +17,20 @@ export class ScriptView extends LitElement {
           grid-template-rows: 70vh 5vh;
         }
         .lines {
+          font-size: var(--font-size-fluid-0);
+          font-family: var(--font-mono);
+          letter-spacing: var(--font-letterspacing-3);
           grid-column: 1/3;
           overflow-y: auto;
         }
         .sd {
-          color: red;
+          color: var(--orange-3);
         }
         #first {
-          font-size: 1.5em;
         }
         #second {
-          color: grey;
         }
         #third {
-          color: lightgrey;
         }
       `
     ];
@@ -45,9 +45,9 @@ export class ScriptView extends LitElement {
     return html`
         <section>
           <div class="lines">
-            <p id="first" class="${first.character}"><b>${first.character}:</b> ${first.lines}</p>
-            ${this.idx + 1 < this.dialogue.length ? html`<p id="second" class="${second.character}"><b>${second.character}:</b> ${second.lines}</p>` : html``}
-            ${this.idx + 2 < this.dialogue.length ? html`<p id="third" class="${third.character}"><b>${third.character}:</b> ${third.lines}</p>` : html``}
+            <p id="first" class="${first.character}"><b>${first.character}:</b><br> ${first.lines}</p>
+            ${this.idx + 1 < this.dialogue.length ? html`<p id="second" class="${second.character}"><b>${second.character}:</b><br> ${second.lines}</p>` : html``}
+            ${this.idx + 2 < this.dialogue.length ? html`<p id="third" class="${third.character}"><b>${third.character}:</b><br> ${third.lines}</p>` : html``}
           </div>
           <button @click="${() => {this.idx==0?this.idx=this.dialogue.length-1:this.idx--;this._updateIndex()}}" ?disabled="${this.idx == 0}">Previous</button>
           <button @click="${() => {this.idx==this.dialogue.length-1?this.idx=0:this.idx++;this._updateIndex()}}">Next</button>
