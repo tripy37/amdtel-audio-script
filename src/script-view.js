@@ -19,9 +19,9 @@ export class ScriptView extends LitElement {
         .lines {
           font-size: var(--font-size-fluid-0);
           font-family: var(--font-mono);
+          text-align: justify;
           letter-spacing: var(--font-letterspacing-3);
           grid-column: 1/3;
-          overflow-y: auto;
         }
         .sd {
           color: var(--orange-3);
