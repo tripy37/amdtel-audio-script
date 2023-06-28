@@ -3,22 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "dist/audio-script.js",
-  "exports": {
-    ".": "./dist/audio-script.js"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "lit": "^2.3.1",
+    "lit": "^2.7.5",
     "open-props": "^1.4.16"
   },
   "devDependencies": {
-    "vite": "^3.1.4"
+    "vite": "^4.3.9"
   }
 }
