@@ -35,13 +35,13 @@ export class ScriptControl extends LitElement {
   render() {
     return html`
         <section>
-          <select .selectedIndex="${this.act}" @change="${(e) => {this.act = e.path[0].selectedIndex;this.scene=0;this.idx=0;this._updateScript()}}">
+          <select .selectedIndex="${this.act}" @change="${(e) => {this.act = e.currentTarget.selectedIndex;this.scene=0;this.idx=0;this._updateScript()}}">
             ${this.script.map((act) => html`<option>${act.name}</option>`)}
           </select>
-          <select .selectedIndex="${this.scene}" @change="${(e) => {this.scene = e.path[0].selectedIndex;this.idx=0;this._updateScript()}}">
+          <select .selectedIndex="${this.scene}" @change="${(e) => {this.scene = e.currentTarget.selectedIndex;this.idx=0;this._updateScript()}}">
             ${this.script[this.act].scene.map((scene) => html`<option>${scene.title}</option>`)}
           </select>
-          <select .selectedIndex="${this.idx}" @change="${(e) => {this.idx = e.path[0].selectedIndex;this._updateScript()}}">
+          <select .selectedIndex="${this.idx}" @change="${(e) => {this.idx = e.currentTarget.selectedIndex;this._updateScript()}}">
             ${this.script[this.act].scene[this.scene].dialogue.map((line, idx) => html`<option>${idx}: ${line.character} ${line.lines.slice(0,25)}...</option>`)}
           </select>
         </section>
