@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "lit": "^2.7.5",
-    "open-props": "^1.4.16"
+    "open-props": "^1.4.16",
+    "ipfs-core": "^0.16.0"
   },
   "devDependencies": {
     "vite": "^4.3.9"
