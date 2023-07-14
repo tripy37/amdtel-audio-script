@@ -17,6 +17,10 @@ export class ScriptControl extends LitElement {
           display: grid;
           grid-template-columns: 1fr 2fr 2fr;
         }
+        .scenebutton {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
         select {
           height: 5vh;
         }
@@ -45,6 +49,10 @@ export class ScriptControl extends LitElement {
             ${this.script[this.act].scene[this.scene].dialogue.map((line, idx) => html`<option>${idx}: ${line.character} ${line.lines.slice(0,25)}...</option>`)}
           </select>
         </section>
+        <div class="scenebutton">
+          <button @click="${() => {this.scene==0?this.scene=this.script[this.act].scene.length-1:this.scene--;this.idx=0;this._updateScript()}}" ?disabled="${this.scene == 0}">Previous Scene</button>
+          <button @click="${() => {this.scene==this.script[this.act].scene.length-1?this.scene=0:this.scene++;this.idx=0;this._updateScript()}}">Next Scene</button>
+        </div>
     `;
   }
 

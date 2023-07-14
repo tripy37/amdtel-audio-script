@@ -50,7 +50,7 @@ export class ScriptView extends LitElement {
             ${this.idx + 2 < this.dialogue.length ? html`<p id="third" class="${third.character}"><b>${third.character}:</b><br> ${third.lines}</p>` : html``}
           </div>
           <button @click="${() => {this.idx==0?this.idx=this.dialogue.length-1:this.idx--;this._updateIndex()}}" ?disabled="${this.idx == 0}">Previous</button>
-          <button @click="${() => {this.idx==this.dialogue.length-1?this.idx=0:this.idx++;this._updateIndex()}}">Next</button>
+          <button @click="${() => {this.idx==this.dialogue.length-1?this.idx=0:this.idx++;this._updateIndex()}}" ?disabled="${this.idx == this.dialogue.length-1}">Next</button>
         </section>
     `;
   }

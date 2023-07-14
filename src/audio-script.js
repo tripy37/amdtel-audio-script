@@ -22,7 +22,7 @@ export class AudioScript extends LitElement {
       css`
         :host {
           display: grid;
-          grid-template-rows: 5vh 5vh 80vh 10vh;
+          grid-template-rows: 5vh 8vh 77vh 10vh;
         }
         .script {
           overflow-y: auto;
