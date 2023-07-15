@@ -5,6 +5,8 @@ import './script-control.js';
 import './script-view.js';
 import './script-record.js';
 
+import './helia-unixfs.js';
+
 export class AudioScript extends LitElement {
   static get properties() {
     return {
@@ -42,7 +44,8 @@ export class AudioScript extends LitElement {
   render() {
     return html`
       ${this._chooser ?
-        html`<script-chooser @script-changed="${(e) => this._displayData(e)}"></script-chooser>`
+        html`<script-chooser @script-changed="${(e) => this._displayData(e)}"></script-chooser>
+              <helia-unixfs></helia-unixfs>`
         :html`
         <button @click="${() => this._chooser = true}">${this._title} Change Script...</button>
         <script-control .script="${this._data.act}" .act="${this._act}" .scene="${this._scene}" .idx="${this._idx}" @update-script="${this._updateScript}"></script-control>

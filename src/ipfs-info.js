@@ -1,5 +1,6 @@
 import {html, LitElement} from 'lit';
-import { create } from 'ipfs-core'
+import { unixfs } from '@helia/unixfs'
+import { createHelia } from 'helia'
 
 export class IPFSInfo extends LitElement {
   static get properties() {
