@@ -5,7 +5,7 @@ import { createHelia } from 'helia'
 export class HeliaUnixfs extends LitElement {
   static get properties() {
     return {
-      _helia: {state: true},
+      _helia: {type: Object},
     }
   }
 
@@ -13,12 +13,6 @@ export class HeliaUnixfs extends LitElement {
     super();
 
     this._helia = null;
-  }
-
-  connectedCallback() {
-    super.connectedCallback()
-
-    this.initHelia();
   }
 
   async initHelia() {
@@ -39,10 +33,6 @@ export class HeliaUnixfs extends LitElement {
   }
 
   render() {
-    if (!this._helia) {
-      return html`Loading...`;
-    }
-
     return html`
       <section>
         <p>data here</p>
@@ -51,4 +41,4 @@ export class HeliaUnixfs extends LitElement {
   }
 }
 
-customElements.define('helia-unixfs', HeliaUnixfs);
+window.customElements.define('helia-unixfs', HeliaUnixfs);
