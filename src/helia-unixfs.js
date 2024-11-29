@@ -17,25 +17,27 @@ export class HeliaUnixfs extends LitElement {
 
   async initHelia() {
     const helia = await createHelia();
+    console.log("is ipfs loaded,", helia)
     const fs = unixfs(helia);
     const encoder = new TextEncoder();
 
     this._helia = helia
 
-    const cid = await fs.addBytes(encoder.encode('Hello World 101'), {
-        onProgress: (evt) => {
-          console.info('add event', evt.type, evt.detail)
-        }
-      })
+    // const cid = await fs.addBytes(encoder.encode('Hello World 101'), {
+    //     onProgress: (evt) => {
+    //       console.info('add event', evt.type, evt.detail)
+    //     }
+    //   })
       
 
-    console.log('Added file:', cid.toString())
+    // console.log('Added file:', cid.toString())
   }
 
   render() {
     return html`
       <section>
-        <p>data here</p>
+      <button @click="${() => this.initHelia()}">Start IPFS</button>  
+      <p>data here</p>
       </section>
     `;
   }
