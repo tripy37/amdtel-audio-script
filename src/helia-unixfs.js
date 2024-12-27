@@ -1,43 +1,44 @@
 import {html, LitElement} from 'lit';
 import { unixfs } from '@helia/unixfs'
-import { createHelia } from 'helia'
+import { createHeliaHTTP } from '@helia/http'
 
 export class HeliaUnixfs extends LitElement {
   static get properties() {
     return {
       _helia: {type: Object},
+      _msg: {type: Text}
     }
   }
 
   constructor() {
     super();
-
     this._helia = null;
+    this._msg = 'Messages will appear here';
   }
 
-  async initHelia() {
-    const helia = await createHelia();
-    console.log("is ipfs loaded,", helia)
+  async firstUpdated() {
+    const helia = await createHeliaHTTP();
+    this._msg = "ipfs loaded";
     const fs = unixfs(helia);
     const encoder = new TextEncoder();
 
-    this._helia = helia
+    this._helia = fs
+  }
 
-    // const cid = await fs.addBytes(encoder.encode('Hello World 101'), {
-    //     onProgress: (evt) => {
-    //       console.info('add event', evt.type, evt.detail)
-    //     }
-    //   })
-      
-
-    // console.log('Added file:', cid.toString())
+  async addFile() {
+    const cid = await fs.addBytes(encoder.encode('Hello World 101'), {
+      onProgress: (evt) => {
+        console.info('add event', evt.type, evt.detail)
+      }
+     })
+    console.log('Added file:', cid.toString())
   }
 
   render() {
     return html`
       <section>
       <button @click="${() => this.initHelia()}">Start IPFS</button>  
-      <p>data here</p>
+      <p>${this._msg}</p>
       </section>
     `;
   }

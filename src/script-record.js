@@ -1,4 +1,5 @@
 import { LitElement, css, html } from 'lit';
+import './helia-unixfs.js';
 
 export class ScriptRecord extends LitElement {
   static get properties() {
@@ -34,7 +35,7 @@ export class ScriptRecord extends LitElement {
   }
 
   render() {
-    if(!this._gotMedia) {return html`<button @click="${this.getUserMedia}">Get Audio Mic</button>`}
+    if(!this._gotMedia) {return html`<p>Geting Audio Mic...</p>`}
     else {
       return html`
       <section>
@@ -42,12 +43,13 @@ export class ScriptRecord extends LitElement {
         <button id="stopButton" @click="${this.stopRecording}" ?disabled="${!this.recordingStatus}">Stop</button>
         <audio controls .src="${this._track}"></audio>
         ${this.url.map((item, idx) => html`<button @click="${()=>this._track = item}">cue</button><button @click="${()=>{URL.revokeObjectURL(item);this.url.splice(idx, 1); this.requestUpdate()}}">delete</button>`)}
+        <helia-unixfs></helia-unixfs>
       </section>
     `
     }
   }
 
-  getUserMedia() {
+  firstUpdated() {
     window._chunks = [];
     navigator.mediaDevices.getUserMedia(this._media.gUM).then(_stream => {
       this._stream = _stream;

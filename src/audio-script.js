@@ -5,8 +5,6 @@ import './script-control.js';
 import './script-view.js';
 import './script-record.js';
 
-import './helia-unixfs.js';
-
 export class AudioScript extends LitElement {
   static get properties() {
     return {
@@ -15,7 +13,8 @@ export class AudioScript extends LitElement {
       _chooser: {type: Boolean},
       _act: {type: Number},
       _scene: {type: Number},
-      _idx: {type: Number}
+      _idx: {type: Number},
+      _record: {type: Boolean}
     };
   }
 
@@ -24,7 +23,6 @@ export class AudioScript extends LitElement {
       css`
         :host {
           display: grid;
-          grid-template-rows: 5vh 8vh 77vh 10vh;
         }
         .script {
           overflow-y: auto;
@@ -39,18 +37,21 @@ export class AudioScript extends LitElement {
     this._act = 0;
     this._scene = 0;
     this._idx = 0;
+    this._record = false;
   }
 
   render() {
     return html`
       ${this._chooser ?
-        html`<script-chooser @script-changed="${(e) => this._displayData(e)}"></script-chooser>
-              <helia-unixfs></helia-unixfs>`
-        :html`
-        <button @click="${() => this._chooser = true}">${this._title} Change Script...</button>
+        html`<script-chooser @script-changed="${(e) => this._displayData(e)}"></script-chooser>`
+        :html`${!this._record ?
+        html`<button @click="${() => this._chooser = true}">${this._title} Change Script...</button>
         <script-control .script="${this._data.act}" .act="${this._act}" .scene="${this._scene}" .idx="${this._idx}" @update-script="${this._updateScript}"></script-control>
         <script-view .dialogue="${this._data.act[this._act].scene[this._scene].dialogue}" .idx="${this._idx}" @update-index="${this._updateIndex}"></script-view>
-        <script-record></script-record>`
+        <button @click="${() => this._record = true}">Record Lines</button>`
+        :html`<script-view .dialogue="${this._data.act[this._act].scene[this._scene].dialogue}" .idx="${this._idx}" @update-index="${this._updateIndex}"></script-view>
+        <button @click="${() => this._record = false}">Finish Recording</button>
+        <script-record></script-record>`}`
       }
     `;
   }
