@@ -22,7 +22,7 @@ A modern web application for managing, viewing, and recording audio scripts. Bui
 ## Technologies Used
 
 - [Lit](https://lit.dev/) - For building fast, lightweight web components
-- [MediaRecorder API](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder) - For audio recording functionality
+- [MediaRecorder API](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder) - For audio recording functionality. Takeing [demo](https://github.com/mdn/dom-examples/tree/main/media/web-dictaphone) example as main use
 - [Helia](https://github.com/ipfs/helia) - For IPFS integration
 - Modern JavaScript (ES6+)
 - CSS Grid for responsive layouts

@@ -1,5 +1,4 @@
 import { LitElement, css, html } from 'lit';
-import './helia-unixfs.js';
 
 export class ScriptRecord extends LitElement {
   static get properties() {
@@ -18,7 +17,9 @@ export class ScriptRecord extends LitElement {
     return [
       css`
         section {
-          height: 10vh;
+          display: grid;
+          grid-template-columns: 3fr 1fr;
+          grid-row-gap: 5px;
         }
       `
     ];
@@ -38,12 +39,12 @@ export class ScriptRecord extends LitElement {
     if(!this._gotMedia) {return html`<p>Geting Audio Mic...</p>`}
     else {
       return html`
-      <section>
         <button id="startButton" @click="${this.startRecording}" ?disabled="${this.recordingStatus}">Record</button>
         <button id="stopButton" @click="${this.stopRecording}" ?disabled="${!this.recordingStatus}">Stop</button>
-        <audio controls .src="${this._track}"></audio>
-        ${this.url.map((item, idx) => html`<button @click="${()=>this._track = item}">cue</button><button @click="${()=>{URL.revokeObjectURL(item);this.url.splice(idx, 1); this.requestUpdate()}}">delete</button>`)}
-        <helia-unixfs></helia-unixfs>
+      <section>
+        ${this.url.map((item, idx) => 
+          html`<audio controls .src="${item}"></audio>
+          <button @click="${()=>{URL.revokeObjectURL(item);this.url.splice(idx, 1); this.requestUpdate()}}">delete</button>`)}
       </section>
     `
     }
