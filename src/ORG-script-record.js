@@ -5,7 +5,6 @@ export class ScriptRecord extends LitElement {
     return {
       _gotMedia: {type: Boolean},
       _stream: {type: Object},
-      _counter: {type: Number},
       _media: {type: Object},
       _track: {type: String},
       recordingStatus: {type: Boolean},
@@ -30,7 +29,6 @@ export class ScriptRecord extends LitElement {
     this._media = { tag: 'audio', type: 'audio/ogg; codecs=opus', ext: '.ogg', gUM: {audio: true}};
     this._gotMedia = false;
     this.recordingStatus = false;
-    this._counter = 1;
     this._track = '';
     this.url = [];
   }

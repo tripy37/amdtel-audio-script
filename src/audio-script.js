@@ -3,7 +3,7 @@ import { LitElement, css, html } from 'lit';
 import './script-chooser.js';
 import './script-control.js';
 import './script-view.js';
-import './script-record.js';
+import './audio-recorder-app.js';
 
 export class AudioScript extends LitElement {
   static get properties() {
@@ -51,7 +51,7 @@ export class AudioScript extends LitElement {
         <button @click="${() => this._record = true}">Record Lines</button>`
         :html`<script-view .dialogue="${this._data.act[this._act].scene[this._scene].dialogue}" .idx="${this._idx}" @update-index="${this._updateIndex}"></script-view>
         <button @click="${() => this._record = false}">Finish Recording</button>
-        <script-record></script-record>`}`
+        <audio-recorder-app></audio-recorder-app>`}`
       }
     `;
   }
