@@ -1,9 +1,205 @@
 @import 'open-props/style';
-
 @import 'open-props/normalize';
 @import 'open-props/buttons';
 
+:root {
+  --app-max-width: 1200px;
+  --app-padding: var(--size-3);
+  --content-spacing: var(--size-5);
+}
+
+/* Base styles */
 body {
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: var(--app-padding);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
+}
+
+/* Main container */
+audio-script {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  width: 100%;
+  background: var(--surface-1);
+  padding: var(--size-4);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-2);
+}
+
+/* Landing page styles */
+.landing-header {
+  text-align: center;
+  margin-bottom: var(--size-8);
+  animation: slideDown 0.5s ease-out;
+}
+
+.landing-header h1 {
+  font-size: var(--font-size-6);
+  color: var(--text-1);
+  margin-bottom: var(--size-3);
+  font-weight: var(--font-weight-7);
+  letter-spacing: var(--font-letterspacing-2);
+}
+
+.landing-header p {
+  font-size: var(--font-size-2);
+  color: var(--text-2);
   max-width: 65ch;
-  margin: auto;
+  margin: 0 auto;
+  line-height: var(--font-lineheight-3);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Script chooser styles */
+script-chooser {
+  display: grid;
+  gap: var(--size-3);
+  padding: var(--size-5);
+  animation: fadeIn 0.5s ease-out 0.2s backwards;
+}
+
+.script-button {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--surface-3);
+  padding: var(--size-6) var(--size-4);
+  border-radius: var(--radius-3);
+  transition: all 0.3s ease;
+}
+
+.script-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, var(--brand-1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.script-button:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-3);
+  border-color: var(--brand-5);
+}
+
+.script-button:hover::before {
+  transform: translateX(100%);
+}
+
+.script-title {
+  font-size: var(--font-size-3);
+  font-weight: var(--font-weight-6);
+  color: var(--brand-7);
+  position: relative;
+}
+
+/* Button styles */
+button {
+  background: var(--brand);
+  color: var(--text-1);
+  border: none;
+  padding: var(--size-3) var(--size-5);
+  border-radius: var(--radius-2);
+  font-weight: var(--font-weight-6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: var(--brand-6);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* Script view and control styles */
+script-view, script-control {
+  background: var(--surface-2);
+  padding: var(--size-3);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--size-3);
+}
+
+/* Audio recorder styles */
+audio-recorder-app {
+  background: var(--surface-3);
+  padding: var(--size-3);
+  border-radius: var(--radius-2);
+  margin-top: var(--size-3);
+}
+
+/* Responsive layout */
+@media (min-width: 768px) {
+  :root {
+    --app-padding: var(--size-5);
+  }
+
+  audio-script {
+    display: grid;
+    gap: var(--size-4);
+    padding: var(--size-5);
+  }
+
+  script-chooser {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .controls-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--size-3);
+    align-items: start;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
