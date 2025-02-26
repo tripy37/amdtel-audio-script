@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import './audio-recorder.js';
-import './ipfs-audio-uploader.js';
+import './audio-ipfs-uploader.js';
 
 export class AudioRecorderApp extends LitElement {
   static properties = {

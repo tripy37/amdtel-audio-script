@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { createHeliaHTTP } from '@helia/http';
 import { unixfs } from '@helia/unixfs';
 
-export class IpfsAudioUploader extends LitElement {
+export class AudioIpfsUploader extends LitElement {
   static properties = {
     gateway: { type: String },
     fallbackGateways: { type: Array },
@@ -377,4 +377,4 @@ export class IpfsAudioUploader extends LitElement {
   }
 }
 
-customElements.define('ipfs-audio-uploader', IpfsAudioUploader);
+customElements.define('audio-ipfs-uploader', AudioIpfsUploader);
