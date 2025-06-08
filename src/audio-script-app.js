@@ -4,20 +4,21 @@ import './script-chooser.js';
 import './script-control.js';
 import './script-view.js';
 import './audio-recorder-app.js';
+import { getScriptState } from './store/script-store.js';
 
-export class AudioScript extends LitElement {
+export class AudioScriptApp extends LitElement {
   static get properties() {
     return {
-      _title: {type: String},
-      _data: {type: Object},
-      _chooser: {type: Boolean},
-      _act: {type: Number},
-      _scene: {type: Number},
-      _idx: {type: Number},
-      _record: {type: Boolean},
-      _showControls: {type: Boolean},
-      _loading: {type: Boolean},
-      _error: {type: String}
+      _title: { type: String },
+      _data: { type: Object },
+      _chooser: { type: Boolean },
+      _act: { type: Number },
+      _scene: { type: Number },
+      _idx: { type: Number },
+      _record: { type: Boolean },
+      _showControls: { type: Boolean },
+      _loading: { type: Boolean },
+      _error: { type: String }
     };
   }
 
@@ -27,13 +28,17 @@ export class AudioScript extends LitElement {
         :host {
           display: grid;
           gap: var(--size-4);
+          height: 100vh;
+          grid-template-rows: auto 1fr auto;
         }
+
         .script {
-          overflow-y: auto;
-          min-height: 75vh;
-          padding: var(--size-3);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
           background: var(--surface-2);
           border-radius: var(--radius-2);
+          height: 100%;
         }
 
         .loading {
@@ -87,10 +92,12 @@ export class AudioScript extends LitElement {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+
         .landing-container {
           text-align: center;
           animation: fadeIn 0.3s ease-in;
         }
+
         .top-bar {
           display: flex;
           justify-content: space-between;
@@ -100,6 +107,7 @@ export class AudioScript extends LitElement {
           background: var(--surface-2);
           border-radius: var(--radius-2);
         }
+
         .menu-btn {
           padding: var(--size-2) var(--size-3);
           background: var(--surface-3);
@@ -108,17 +116,38 @@ export class AudioScript extends LitElement {
           cursor: pointer;
           transition: all 0.2s ease;
         }
+
         .menu-btn.active {
           background: var(--brand-3);
           border-color: var(--brand-5);
         }
+
         .controls-panel {
           animation: slideDown 0.3s ease-out;
         }
+
+        .record-btn, .finish-btn {
+          padding: var(--size-3) var(--size-4);
+          background: var(--brand);
+          color: white;
+          border: none;
+          border-radius: var(--radius-2);
+          font-weight: var(--font-weight-6);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          margin: var(--size-3);
+        }
+
+        .record-btn:hover, .finish-btn:hover {
+          background: var(--brand-4);
+          transform: translateY(-1px);
+        }
+
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
+
         @keyframes slideDown {
           from {
             opacity: 0;
@@ -135,17 +164,55 @@ export class AudioScript extends LitElement {
 
   constructor() {
     super();
-    this._chooser = true;
-    this._act = 0;
-    this._scene = 0;
-    this._idx = 0;
-    this._record = false;
-    this._showControls = false;
-    this._loading = false;
-    this._error = '';
+    // Initialize state controller
+    this.scriptState = getScriptState();
+    
+    // Initialize state from the store
+    this._title = this.scriptState.state.title;
+    this._data = this.scriptState.state.data;
+    this._chooser = this.scriptState.state.showChooser;
+    this._act = this.scriptState.state.act;
+    this._scene = this.scriptState.state.scene;
+    this._idx = this.scriptState.state.idx;
+    this._record = this.scriptState.state.isRecording;
+    this._showControls = this.scriptState.state.showControls;
+    this._loading = this.scriptState.state.loading;
+    this._error = this.scriptState.state.error;
+
+    // Subscribe to state changes
+    this._unsubscribe = this.scriptState.subscribe((state) => {
+      console.log('State updated:', state);
+      this._title = state.title;
+      this._data = state.data;
+      this._chooser = state.showChooser;
+      this._act = state.act;
+      this._scene = state.scene;
+      this._idx = state.idx;
+      this._record = state.isRecording;
+      this._showControls = state.showControls;
+      this._loading = state.loading;
+      this._error = state.error;
+      this.requestUpdate();
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // Clean up subscription when component is removed
+    if (this._unsubscribe) {
+      this._unsubscribe();
+    }
   }
 
   render() {
+    console.log('Rendering AudioScriptApp with:', {
+      data: this._data,
+      act: this._act,
+      scene: this._scene,
+      idx: this._idx,
+      showControls: this._showControls
+    });
+
     if (this._loading) {
       return html`
         <div class="loading" role="status" aria-live="polite">
@@ -161,12 +228,22 @@ export class AudioScript extends LitElement {
             <span class="error-icon">⚠️</span>
             <span>${this._error}</span>
           </div>
-          <button @click="${() => {this._error = ''; this._chooser = true;}}" class="try-again-btn">
+          <button @click="${() => this.scriptState.reset()}" class="try-again-btn">
             Return to Script Selection
           </button>
         </div>
       `;
     }
+
+    const currentAct = this._data?.act?.[this._act];
+    const currentScene = currentAct?.scene?.[this._scene];
+    const currentDialogue = currentScene?.dialogue || [];
+
+    console.log('Current data:', {
+      act: currentAct,
+      scene: currentScene,
+      dialogue: currentDialogue
+    });
 
     return html`
       ${this._chooser ?
@@ -182,14 +259,10 @@ export class AudioScript extends LitElement {
         :html`${!this._record ?
         html`
         <div class="top-bar">
-          <!-- <button class="change-script-btn" @click="${() => this._chooser = true}">
-            <span class="visually-hidden">Change current script:</span>
-            ${this._title}
-          </button> -->
           ${this._showControls ? html`
             <div class="controls-panel">
               <script-control 
-                .script="${this._data.act}" 
+                .script="${this._data?.act || []}" 
                 .act="${this._act}" 
                 .scene="${this._scene}" 
                 .idx="${this._idx}" 
@@ -199,7 +272,7 @@ export class AudioScript extends LitElement {
           ` : ''}
           <button 
             class="menu-btn ${this._showControls ? 'active' : ''}" 
-            @click="${() => this._showControls = !this._showControls}"
+            @click="${() => this.scriptState.toggleControls()}"
             aria-label="Toggle script controls"
             aria-expanded="${this._showControls}">
             ⚙️ Controls
@@ -208,63 +281,63 @@ export class AudioScript extends LitElement {
         
         <div class="script">
           <script-view 
-            .dialogue="${this._data.act[this._act].scene[this._scene].dialogue}" 
+            .dialogue="${currentDialogue}" 
             .idx="${this._idx}" 
             @update-index="${this._updateIndex}">
           </script-view>
-        </div>
-        <button class="record-btn" @click="${() => this._record = true}">Record Lines</button>`
+          <button class="record-btn" @click="${() => this.scriptState.toggleRecording()}">Record Lines</button>
+        </div>`
         :html`
         <div class="script">
           <script-view 
-            .dialogue="${this._data.act[this._act].scene[this._scene].dialogue}" 
+            .dialogue="${currentDialogue}" 
             .idx="${this._idx}" 
             @update-index="${this._updateIndex}">
           </script-view>
-        </div>
-        <button class="finish-btn" @click="${() => this._record = false}">Finish Recording</button>
-        <audio-recorder-app></audio-recorder-app>`}`
+          <button class="finish-btn" @click="${() => this.scriptState.toggleRecording()}">Finish Recording</button>
+          <audio-recorder-app></audio-recorder-app>
+        </div>`}`
       }
     `;
   }
 
   async _displayData(e) {
-    this._loading = true;
-    this._error = '';
+    console.log('Displaying data:', e.detail);
+    this.scriptState.setLoading(true);
+    this.scriptState.setError('');
     
     try {
-      const response = await fetch(e.detail.script);
-      if (!response.ok) {
-        throw new Error(`Failed to load script (${response.status})`);
-      }
-      const data = await response.json();
-      
-      if (!data.act || !Array.isArray(data.act)) {
+      if (!e.detail.data || !e.detail.data.act || !Array.isArray(e.detail.data.act)) {
         throw new Error('Invalid script format');
       }
 
-      this._data = data;
-      this._title = e.detail.title;
-      this._act = 0;
-      this._scene = 0;
-      this._idx = 0;
-      this._chooser = false;
+      // Log the structure of the first act and scene for debugging
+      if (e.detail.data.act[0] && e.detail.data.act[0].scene) {
+        console.log('First act structure:', {
+          name: e.detail.data.act[0].name,
+          sceneCount: e.detail.data.act[0].scene.length,
+          firstScene: e.detail.data.act[0].scene[0]
+        });
+      }
+
+      this.scriptState.setScript(e.detail.title, e.detail.data);
     } catch (error) {
       console.error('Script loading error:', error);
-      this._error = error.message;
-      this._data = null;
+      this.scriptState.setError(error.message);
     } finally {
-      this._loading = false;
+      this.scriptState.setLoading(false);
     }
   }
+
   _updateScript(e) {
-    this._act = e.detail.act;
-    this._scene = e.detail.scene;
-    this._idx = e.detail.idx;
+    console.log('Updating script:', e.detail);
+    this.scriptState.updateNavigation(e.detail.act, e.detail.scene, e.detail.idx);
   }
+
   _updateIndex(e) {
-    this._idx = e.detail.idx
+    console.log('Updating index:', e.detail);
+    this.scriptState.updateNavigation(this._act, this._scene, e.detail.idx);
   }
 }
 
-window.customElements.define('audio-script', AudioScript);
+window.customElements.define('audio-script-app', AudioScriptApp);

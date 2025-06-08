@@ -130,6 +130,75 @@ export class ScriptChooser extends LitElement {
     this._loading = true;
   }
 
+  firstUpdated() {
+    console.log('Loading scripts...');
+    fetch('./scriptsDB.json')
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((data) => {
+        console.log('Scripts loaded:', data);
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid data format: expected an array');
+        }
+        this._data = data;
+        this._loading = false;
+      })
+      .catch((e) => {
+        console.error('Failed to load scripts:', e);
+        this._loading = false;
+        this._data = [];
+      });
+  }
+
+  async _changeScript(item) {
+    console.log('Changing script:', item);
+    try {
+      const response = await fetch(item.script);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const scriptData = await response.json();
+      console.log('Script data loaded:', scriptData);
+      
+      // Validate script data structure
+      if (!scriptData.act || !Array.isArray(scriptData.act)) {
+        throw new Error('Invalid script format: missing or invalid act data');
+      }
+
+      // Log the structure of the first act and scene for debugging
+      if (scriptData.act[0] && scriptData.act[0].scene) {
+        console.log('First act structure:', {
+          name: scriptData.act[0].name,
+          sceneCount: scriptData.act[0].scene.length,
+          firstScene: scriptData.act[0].scene[0]
+        });
+      }
+
+      this.dispatchEvent(
+        new CustomEvent('script-changed', {
+          detail: {
+            title: item.title,
+            script: item.script,
+            data: scriptData
+          }
+        })
+      );
+    } catch (error) {
+      console.error('Error loading script:', error);
+      this.dispatchEvent(
+        new CustomEvent('error', {
+          detail: {
+            message: `Failed to load script: ${error.message}`
+          }
+        })
+      );
+    }
+  }
+
   render() {
     return html`
       ${this._loading
@@ -173,58 +242,6 @@ export class ScriptChooser extends LitElement {
         </div>
       </button>
     `;
-  }
-
-  firstUpdated() {
-    fetch('./scriptsDB.json')
-      .then((r) => {
-        if (!r.ok) {
-          throw new Error(`HTTP error! status: ${r.status}`);
-        }
-        return r.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data)) {
-          throw new Error('Invalid data format: expected an array');
-        }
-        this._data = data;
-        this._loading = false;
-      })
-      .catch((e) => {
-        console.error('Failed to load scripts:', e);
-        this._loading = false;
-        this._data = [];
-      });
-  }
-
-  async _changeScript(item) {
-    try {
-      const response = await fetch(item.script);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const scriptData = await response.json();
-      
-      this.dispatchEvent(
-        new CustomEvent('script-changed', {
-          detail: {
-            title: item.title,
-            script: item.script,
-            ...scriptData
-          }
-        })
-      );
-    } catch (error) {
-      console.error('Error loading script:', error);
-      // Show error in UI
-      this.dispatchEvent(
-        new CustomEvent('error', {
-          detail: {
-            message: `Failed to load script: ${error.message}`
-          }
-        })
-      );
-    }
   }
 }
 

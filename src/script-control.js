@@ -97,10 +97,39 @@ export class ScriptControl extends LitElement {
     super();
     this.act = 0;
     this.scene = 0;
-    this.idx =0;
+    this.idx = 0;
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has('script')) {
+      console.log('Script data updated:', this.script);
+    }
   }
 
   render() {
+    console.log('Rendering ScriptControl with:', {
+      script: this.script,
+      act: this.act,
+      scene: this.scene,
+      idx: this.idx
+    });
+
+    if (!this.script || !Array.isArray(this.script) || this.script.length === 0) {
+      return html`
+        <div class="controls-container" role="group" aria-label="Script navigation controls">
+          <div class="selects-group">
+            <div class="select-wrapper">
+              <label>No script data available</label>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const currentAct = this.script[this.act] || { name: '', scene: [] };
+    const currentScene = currentAct.scene?.[this.scene] || { title: '', dialogue: [] };
+    const currentDialogue = currentScene.dialogue || [];
+
     return html`
       <div class="controls-container" role="group" aria-label="Script navigation controls">
         <div class="selects-group">
@@ -108,10 +137,17 @@ export class ScriptControl extends LitElement {
             <label for="act-select">Act</label>
             <select 
               id="act-select"
-              .selectedIndex="${this.act}" 
-              @change="${(e) => {this.act = e.currentTarget.selectedIndex;this.scene=0;this.idx=0;this._updateScript()}}"
+              .value="${this.act}"
+              @change="${(e) => {
+                this.act = parseInt(e.target.value);
+                this.scene = 0;
+                this.idx = 0;
+                this._updateScript();
+              }}"
               aria-label="Select Act">
-              ${this.script.map((act) => html`<option>${act.name}</option>`)}
+              ${this.script.map((act, index) => html`
+                <option value="${index}">${act.name || 'Untitled Act'}</option>
+              `)}
             </select>
           </div>
 
@@ -119,10 +155,16 @@ export class ScriptControl extends LitElement {
             <label for="scene-select">Scene</label>
             <select 
               id="scene-select"
-              .selectedIndex="${this.scene}" 
-              @change="${(e) => {this.scene = e.currentTarget.selectedIndex;this.idx=0;this._updateScript()}}"
+              .value="${this.scene}"
+              @change="${(e) => {
+                this.scene = parseInt(e.target.value);
+                this.idx = 0;
+                this._updateScript();
+              }}"
               aria-label="Select Scene">
-              ${this.script[this.act].scene.map((scene) => html`<option>${scene.title}</option>`)}
+              ${currentAct.scene?.map((scene, index) => html`
+                <option value="${index}">${scene.title || 'Untitled Scene'}</option>
+              `) || []}
             </select>
           </div>
 
@@ -130,11 +172,14 @@ export class ScriptControl extends LitElement {
             <label for="line-select">Line</label>
             <select 
               id="line-select"
-              .selectedIndex="${this.idx}" 
-              @change="${(e) => {this.idx = e.currentTarget.selectedIndex;this._updateScript()}}"
+              .value="${this.idx}"
+              @change="${(e) => {
+                this.idx = parseInt(e.target.value);
+                this._updateScript();
+              }}"
               aria-label="Select Line">
-              ${this.script[this.act].scene[this.scene].dialogue.map((line, idx) => html`
-                <option>${idx + 1}: ${line.character} - ${line.lines.slice(0,25)}${line.lines.length > 25 ? '...' : ''}</option>
+              ${currentDialogue.map((line, idx) => html`
+                <option value="${idx}">${idx + 1}: ${line.character || 'Unknown'} - ${(line.lines || '').slice(0,25)}${(line.lines || '').length > 25 ? '...' : ''}</option>
               `)}
             </select>
           </div>
@@ -144,6 +189,12 @@ export class ScriptControl extends LitElement {
   }
 
   _updateScript() {
+    console.log('Updating script with:', {
+      act: this.act,
+      scene: this.scene,
+      idx: this.idx
+    });
+    
     this.dispatchEvent(new CustomEvent('update-script', {
       detail: {
         act: this.act,
