@@ -1,12 +1,15 @@
 import { LitElement, html, css } from 'lit';
 import './audio-recorder.js';
 import './audio-ipfs-uploader.js';
+import { storageService } from './services/storage-service.js';
 
 export class AudioRecorderApp extends LitElement {
   static properties = {
     recordings: { type: Array, state: true },
     currentStatus: { type: String, state: true },
-    selectedRecording: { type: Object, state: true }
+    selectedRecording: { type: Object, state: true },
+    scriptContext: { type: Object, state: true },
+    currentLineRecordings: { type: Array, state: true }
   };
 
   static styles = css`
@@ -18,20 +21,13 @@ export class AudioRecorderApp extends LitElement {
       max-width: 800px;
       margin: 0 auto;
     }
-    .recordings {
-      margin-top: 2rem;
-    }
-    .recording-item {
-      padding: 1rem;
-      margin: 1rem 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: white;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      color: #333;
-      margin: 0 0 1rem 0;
+    .recorder-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-4);
+      padding: var(--size-4);
+      background: var(--surface-2);
+      border-radius: var(--radius-2);
     }
     .status-message {
       padding: 0.5rem;
@@ -46,10 +42,18 @@ export class AudioRecorderApp extends LitElement {
       background-color: #e0f2fe;
       color: #0369a1;
     }
-    .no-recordings {
-      text-align: center;
-      color: #666;
-      padding: 2rem;
+    .recording-history {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--surface-3);
+    }
+    .recording-item {
+      padding: 1rem;
+      margin: 1rem 0;
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      background: var(--surface-1);
+      box-shadow: var(--shadow-1);
     }
     .recording-info {
       display: flex;
@@ -79,39 +83,35 @@ export class AudioRecorderApp extends LitElement {
       background-color: #fee2e2;
       color: #dc2626;
     }
-    .loading {
-      color: #666;
-      font-style: italic;
-    }
     .actions {
       display: flex;
       gap: 0.5rem;
       margin-top: 1rem;
       padding-top: 1rem;
-      border-top: 1px solid #eee;
+      border-top: 1px solid var(--surface-3);
     }
     button {
       padding: 0.5rem 1rem;
-      border-radius: 4px;
+      border-radius: var(--radius-2);
       border: none;
       cursor: pointer;
-      background: #0369a1;
+      background: var(--brand);
       color: white;
       font-weight: 500;
       transition: background-color 0.2s;
     }
     button:hover {
-      background: #0284c7;
+      background: var(--brand-4);
     }
     button:disabled {
-      background: #9ca3af;
+      background: var(--surface-3);
       cursor: not-allowed;
     }
     button.delete {
-      background: #dc2626;
+      background: var(--red-5);
     }
     button.delete:hover {
-      background: #b91c1c;
+      background: var(--red-6);
     }
     audio {
       width: 100%;
@@ -124,35 +124,107 @@ export class AudioRecorderApp extends LitElement {
     this.recordings = [];
     this.currentStatus = '';
     this.selectedRecording = null;
+    this.scriptContext = null;
+    this.currentLineRecordings = [];
     this._loadRecordings();
+  }
+
+  setScriptContext(context) {
+    this.scriptContext = context;
+    this._loadCurrentLineRecordings();
   }
 
   async _loadRecordings() {
     try {
-      const stored = localStorage.getItem('audioRecordings');
-      if (stored) {
-        this.recordings = JSON.parse(stored);
-      }
+      const allRecordings = await storageService.getAllRecordings();
+      this.recordings = allRecordings;
+      this._loadCurrentLineRecordings();
     } catch (error) {
       console.error('Failed to load recordings:', error);
       this.currentStatus = 'Error loading recordings';
     }
   }
 
-  deleteRecording(index) {
-    if (this.recordings[index].audioUrl) {
-      URL.revokeObjectURL(this.recordings[index].audioUrl);
+  async _loadCurrentLineRecordings() {
+    if (this.scriptContext) {
+      try {
+        this.currentLineRecordings = await storageService.getRecordingsForLine(
+          this.scriptContext.scriptId,
+          this.scriptContext.act,
+          this.scriptContext.scene,
+          this.scriptContext.lineIndex
+        );
+      } catch (error) {
+        console.error('Failed to load line recordings:', error);
+        this.currentStatus = 'Error loading line recordings';
+      }
+    } else {
+      this.currentLineRecordings = [];
     }
-    this.recordings = [
-      ...this.recordings.slice(0, index),
-      ...this.recordings.slice(index + 1)
-    ];
-    this._saveRecordings();
-    this.currentStatus = 'Recording deleted';
   }
 
-  async saveToIpfs(index) {
-    const recording = this.recordings[index];
+  async handleRecordingComplete(e) {
+    if (!this.scriptContext) {
+      this.currentStatus = 'Error: No script context available';
+      return;
+    }
+
+    try {
+      const blob = new Blob(e.detail.chunks, { type: 'audio/webm' });
+      const audioUrl = URL.createObjectURL(blob);
+      
+      const newRecording = {
+        id: crypto.randomUUID(),
+        chunks: e.detail.chunks,
+        audioUrl,
+        timestamp: new Date().toISOString(),
+        duration: e.detail.duration,
+        ipfsStatus: 'local',
+        scriptId: this.scriptContext.scriptId,
+        act: this.scriptContext.act,
+        scene: this.scriptContext.scene,
+        lineIndex: this.scriptContext.lineIndex,
+        lineText: this.scriptContext.lineText
+      };
+      
+      // Save to IndexedDB
+      await storageService.saveRecording(newRecording);
+      
+      // Update local state
+      this.currentLineRecordings = [...this.currentLineRecordings, newRecording];
+      this.recordings = [...this.recordings, newRecording];
+      
+      this.currentStatus = 'Recording saved locally';
+    } catch (error) {
+      console.error('Failed to save recording:', error);
+      this.currentStatus = 'Error saving recording';
+    }
+  }
+
+  async deleteRecording(recordingId) {
+    try {
+      // Remove from IndexedDB
+      await storageService.deleteRecording(recordingId);
+      
+      // Update local state
+      this.currentLineRecordings = this.currentLineRecordings.filter(rec => rec.id !== recordingId);
+      this.recordings = this.recordings.filter(rec => rec.id !== recordingId);
+      
+      // Clean up the audio URL
+      const recording = this.recordings.find(rec => rec.id === recordingId);
+      if (recording?.audioUrl) {
+        URL.revokeObjectURL(recording.audioUrl);
+      }
+      
+      this.currentStatus = 'Recording deleted';
+    } catch (error) {
+      console.error('Failed to delete recording:', error);
+      this.currentStatus = 'Error deleting recording';
+    }
+  }
+
+  async saveToIpfs(recordingId) {
+    const recording = this.recordings.find(rec => rec.id === recordingId);
     if (!recording || recording.ipfsStatus === 'uploading') return;
 
     this.selectedRecording = recording;
@@ -164,22 +236,12 @@ export class AudioRecorderApp extends LitElement {
 
     try {
       recording.ipfsStatus = 'uploading';
-      this._saveRecordings();
       
       await uploader.setAudioData(recording.chunks);
       this.currentStatus = 'Uploading to IPFS...';
     } catch (error) {
       recording.ipfsStatus = 'failed';
-      this._saveRecordings();
       this.currentStatus = `Error: ${error.message}`;
-    }
-  }
-
-  _saveRecordings() {
-    try {
-      localStorage.setItem('audioRecordings', JSON.stringify(this.recordings));
-    } catch (error) {
-      console.error('Failed to save recordings:', error);
     }
   }
 
@@ -189,7 +251,6 @@ export class AudioRecorderApp extends LitElement {
       this.selectedRecording.cid = cid;
       this.selectedRecording.gatewayUrl = gatewayUrl;
       this.selectedRecording.ipfsStatus = 'uploaded';
-      this._saveRecordings();
       this.currentStatus = 'Successfully saved to IPFS';
       this.selectedRecording = null;
     }
@@ -204,27 +265,9 @@ export class AudioRecorderApp extends LitElement {
     this.currentStatus = e.detail;
   }
 
-  handleRecordingComplete(e) {
-    const blob = new Blob(e.detail.chunks, { type: 'audio/webm' });
-    const audioUrl = URL.createObjectURL(blob);
-    
-    const newRecording = {
-      chunks: e.detail.chunks,
-      audioUrl,
-      timestamp: new Date().toLocaleString(),
-      ipfsStatus: 'local' // 'local', 'uploading', 'uploaded', 'failed'
-    };
-    
-    this.recordings = [...this.recordings, newRecording];
-    this._saveRecordings();
-    this.currentStatus = 'Recording saved locally';
-  }
-
   render() {
     return html`
       <div class="container">
-        <h2>Audio Recorder</h2>
-        
         <!-- Status Display -->
         ${this.currentStatus ? html`
           <div class="status-message ${this.currentStatus.includes('Error') ? 'error' : 'info'}">
@@ -232,64 +275,72 @@ export class AudioRecorderApp extends LitElement {
           </div>
         ` : ''}
         
-        <!-- Recorder Component -->
-        <audio-recorder
-          @recording-complete=${this.handleRecordingComplete}
-        ></audio-recorder>
+        <div class="recorder-container">
+          <!-- Recorder Component -->
+          <audio-recorder
+            @recording-complete=${this.handleRecordingComplete}
+          ></audio-recorder>
 
-        <!-- Hidden IPFS Uploader Component -->
-        <ipfs-audio-uploader
-          gateway="https://ipfs.io/ipfs/"
-          @upload-complete=${this.handleUploadComplete}
-          @upload-error=${this.handleUploadError}
-          style="display: none;"
-        ></ipfs-audio-uploader>
+          <!-- Hidden IPFS Uploader Component -->
+          <ipfs-audio-uploader
+            gateway="https://ipfs.io/ipfs/"
+            @upload-complete=${this.handleUploadComplete}
+            @upload-error=${this.handleUploadError}
+            style="display: none;"
+          ></ipfs-audio-uploader>
 
-        <!-- Recording History -->
-        <div class="recordings">
-          <h2>Recording History</h2>
-          ${this.recordings.length === 0 ? html`
-            <div class="no-recordings">No recordings yet</div>
-          ` : 
-          this.recordings.map((recording, index) => html`
-            <div class="recording-item">
-              <div class="recording-info">
-                <div>Recorded: ${recording.timestamp}</div>
-                ${recording.cid ? html`
-                  <div>CID: ${recording.cid}</div>
-                  <div>IPFS URL: <a href="${recording.gatewayUrl}" target="_blank">${recording.gatewayUrl}</a></div>
-                ` : ''}
-                <div class="status ${recording.ipfsStatus}">
-                  ${recording.ipfsStatus === 'local' ? 'Saved Locally' :
-                    recording.ipfsStatus === 'uploading' ? 'Uploading to IPFS...' :
-                    recording.ipfsStatus === 'uploaded' ? 'Saved to IPFS' :
-                    recording.ipfsStatus === 'failed' ? 'IPFS Upload Failed' : ''}
+          <!-- Current Line Recordings -->
+          ${this.currentLineRecordings.length > 0 ? html`
+            <div class="recording-history">
+              <h3>Recordings for this line (${this.currentLineRecordings.length})</h3>
+              ${this.currentLineRecordings.map((recording) => html`
+                <div class="recording-item">
+                  <div class="recording-info">
+                    <div>Recorded: ${recording.timestamp}</div>
+                    <div>Duration: ${this.formatDuration(recording.duration)}</div>
+                    ${recording.cid ? html`
+                      <div>CID: ${recording.cid}</div>
+                      <div>IPFS URL: <a href="${recording.gatewayUrl}" target="_blank">${recording.gatewayUrl}</a></div>
+                    ` : ''}
+                    <div class="status ${recording.ipfsStatus}">
+                      ${recording.ipfsStatus === 'local' ? 'Saved Locally' :
+                        recording.ipfsStatus === 'uploading' ? 'Uploading to IPFS...' :
+                        recording.ipfsStatus === 'uploaded' ? 'Saved to IPFS' :
+                        recording.ipfsStatus === 'failed' ? 'IPFS Upload Failed' : ''}
+                    </div>
+                  </div>
+                  
+                  <audio controls src="${recording.audioUrl || recording.gatewayUrl}"></audio>
+                  
+                  <div class="actions">
+                    ${recording.ipfsStatus === 'local' || recording.ipfsStatus === 'failed' ? html`
+                      <button @click=${() => this.saveToIpfs(recording.id)}
+                              ?disabled=${recording.ipfsStatus === 'uploading'}>
+                        Save to IPFS
+                      </button>
+                    ` : ''}
+                    <button class="delete" @click=${() => this.deleteRecording(recording.id)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-              
-              <audio controls src="${recording.audioUrl || recording.gatewayUrl}"></audio>
-              
-              <div class="actions">
-                ${recording.ipfsStatus === 'local' || recording.ipfsStatus === 'failed' ? html`
-                  <button @click=${() => this.saveToIpfs(index)}
-                          ?disabled=${recording.ipfsStatus === 'uploading'}>
-                    Save to IPFS
-                  </button>
-                ` : ''}
-                <button class="delete" @click=${() => this.deleteRecording(index)}>
-                  Delete
-                </button>
-              </div>
+              `)}
             </div>
-          `)}
+          ` : html`
+            <div class="no-recordings">
+              No recordings yet for this line. Click the record button above to start recording.
+            </div>
+          `}
         </div>
       </div>
     `;
   }
 
-
-
-
+  formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 }
 
 customElements.define('audio-recorder-app', AudioRecorderApp);

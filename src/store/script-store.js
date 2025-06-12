@@ -54,7 +54,7 @@ export class ScriptState {
     this._state.act = 0;
     this._state.scene = 0;
     this._state.idx = 0;
-    this._state.showControls = true;
+    this._state.showControls = false;
     this._notifyStateChange();
   }
 

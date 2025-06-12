@@ -33,7 +33,6 @@ export class AudioScriptApp extends LitElement {
         }
 
         .script {
-          overflow: hidden;
           display: flex;
           flex-direction: column;
           background: var(--surface-2);
@@ -107,6 +106,11 @@ export class AudioScriptApp extends LitElement {
           background: var(--surface-2);
           border-radius: var(--radius-2);
         }
+        .menu-buttons {
+          display: flex;
+          gap: var(--size-3);
+          align-items: left;
+        }
 
         .menu-btn {
           padding: var(--size-2) var(--size-3);
@@ -115,6 +119,9 @@ export class AudioScriptApp extends LitElement {
           border-radius: var(--radius-2);
           cursor: pointer;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: var(--size-2);
         }
 
         .menu-btn.active {
@@ -122,25 +129,71 @@ export class AudioScriptApp extends LitElement {
           border-color: var(--brand-5);
         }
 
+        .menu-btn.record {
+          background: var(--red-3);
+          border-color: var(--red-4);
+        }
+
+        .menu-btn.record:hover {
+          background: var(--red-4);
+        }
+
+        .menu-btn.record.active {
+          background: var(--red-5);
+          border-color: var(--red-6);
+        }
+
         .controls-panel {
           animation: slideDown 0.3s ease-out;
         }
 
-        .record-btn, .finish-btn {
-          padding: var(--size-3) var(--size-4);
-          background: var(--brand);
-          color: white;
-          border: none;
+        .recording-view {
+          display: flex;
+          flex-direction: column;
+          gap: var(--size-4);
+          padding: var(--size-4);
+          background: var(--surface-1);
           border-radius: var(--radius-2);
-          font-weight: var(--font-weight-6);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          margin: var(--size-3);
+          margin: var(--size-4);
+          animation: fadeIn 0.3s ease-in;
         }
 
-        .record-btn:hover, .finish-btn:hover {
-          background: var(--brand-4);
-          transform: translateY(-1px);
+        .recording-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: var(--size-3);
+          border-bottom: 1px solid var(--surface-3);
+        }
+
+        .recording-title {
+          font-size: var(--font-size-4);
+          color: var(--text-1);
+          font-weight: var(--font-weight-6);
+        }
+
+        .recording-line {
+          font-size: var(--font-size-3);
+          color: var(--text-2);
+          line-height: 1.6;
+          padding: var(--size-4);
+          background: var(--surface-2);
+          border-radius: var(--radius-2);
+          margin: var(--size-4) 0;
+        }
+
+        .recording-character {
+          font-size: var(--font-size-3);
+          color: var(--brand);
+          font-weight: var(--font-weight-6);
+          margin-bottom: var(--size-2);
+        }
+
+        .recording-controls {
+          display: flex;
+          gap: var(--size-3);
+          justify-content: center;
+          margin-top: var(--size-4);
         }
 
         @keyframes fadeIn {
@@ -205,13 +258,6 @@ export class AudioScriptApp extends LitElement {
   }
 
   render() {
-    console.log('Rendering AudioScriptApp with:', {
-      data: this._data,
-      act: this._act,
-      scene: this._scene,
-      idx: this._idx,
-      showControls: this._showControls
-    });
 
     if (this._loading) {
       return html`
@@ -235,19 +281,11 @@ export class AudioScriptApp extends LitElement {
       `;
     }
 
-    const currentAct = this._data?.act?.[this._act];
-    const currentScene = currentAct?.scene?.[this._scene];
-    const currentDialogue = currentScene?.dialogue || [];
+    const currentDialogue = this._data?.act[this._act]?.scene[this._scene]?.dialogue || [];
+    const currentLine = currentDialogue[this._idx];
 
-    console.log('Current data:', {
-      act: currentAct,
-      scene: currentScene,
-      dialogue: currentDialogue
-    });
-
-    return html`
-      ${this._chooser ?
-        html`
+    if (this._chooser) {
+      return html`
         <div class="landing-container">
           <div class="landing-header">
             <h1>Audio Audition Scripts</h1>
@@ -255,9 +293,11 @@ export class AudioScriptApp extends LitElement {
           </div>
           <script-chooser @script-changed="${this._displayData}"></script-chooser>
         </div>
-        `
-        :html`${!this._record ?
-        html`
+      `;
+    }
+
+    if (!this._chooser && !this._record) {
+      return html`
         <div class="top-bar">
           ${this._showControls ? html`
             <div class="controls-panel">
@@ -270,35 +310,63 @@ export class AudioScriptApp extends LitElement {
               </script-control>
             </div>
           ` : ''}
-          <button 
-            class="menu-btn ${this._showControls ? 'active' : ''}" 
-            @click="${() => this.scriptState.toggleControls()}"
-            aria-label="Toggle script controls"
-            aria-expanded="${this._showControls}">
-            ⚙️ Controls
-          </button>
+          <div class="menu-buttons">
+            <button 
+              class="menu-btn ${this._showControls ? 'active' : ''}" 
+              @click="${() => this.scriptState.toggleControls()}"
+              aria-label="Toggle script controls"
+              aria-expanded="${this._showControls}">
+              ⚙️ Controls
+            </button>
+            <button 
+              class="menu-btn record ${this._record ? 'active' : ''}" 
+              @click="${() => this.scriptState.toggleRecording()}"
+              aria-label="Toggle recording mode">
+              ${this._record ? '🎙️ Stop Recording' : '🎙️ Record Line'}
+            </button>
+          </div>
         </div>
-        
         <div class="script">
           <script-view 
             .dialogue="${currentDialogue}" 
             .idx="${this._idx}" 
             @update-index="${this._updateIndex}">
           </script-view>
-          <button class="record-btn" @click="${() => this.scriptState.toggleRecording()}">Record Lines</button>
-        </div>`
-        :html`
-        <div class="script">
-          <script-view 
-            .dialogue="${currentDialogue}" 
-            .idx="${this._idx}" 
-            @update-index="${this._updateIndex}">
-          </script-view>
-          <button class="finish-btn" @click="${() => this.scriptState.toggleRecording()}">Finish Recording</button>
-          <audio-recorder-app></audio-recorder-app>
-        </div>`}`
-      }
-    `;
+        </div>
+      `;
+    }
+
+    if (this._record) {
+      return html`
+        <div class="recording-view">
+          <div class="recording-header">
+            <div class="recording-title">
+              Recording Line ${this._idx + 1} of ${currentDialogue.length}
+            </div>
+            <button 
+              class="menu-btn"
+              @click="${() => this.scriptState.toggleRecording()}">
+              ← Back to Script
+            </button>
+          </div>
+              
+          <div class="recording-line">
+            <div class="recording-character">${currentLine?.character || 'Unknown'}</div>
+            <div class="recording-text">${currentLine?.lines || ''}</div>
+          </div>
+
+          <audio-recorder-app
+            .scriptContext=${{
+              scriptId: this._title,
+              act: this._act,
+              scene: this._scene,
+              lineIndex: this._idx,
+              lineText: currentLine?.lines || ''
+            }}>
+          </audio-recorder-app>
+        </div>
+      `;
+    }
   }
 
   async _displayData(e) {

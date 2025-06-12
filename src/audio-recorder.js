@@ -4,54 +4,136 @@ export class AudioRecorder extends LitElement {
   static properties = {
     isRecording: { type: Boolean, state: true },
     error: { type: String, state: true },
+    recordingTime: { type: Number, state: true },
+    recordingLevel: { type: Number, state: true }
   };
 
   static styles = css`
     :host {
       display: block;
-      padding: 1rem;
+      padding: var(--size-4);
+      background: var(--surface-2);
+      border-radius: var(--radius-2);
     }
+
+    .recorder-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-4);
+    }
+
     .controls {
       display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
+      gap: var(--size-3);
+      justify-content: center;
+      margin-bottom: var(--size-4);
     }
-    button {
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
+
+    .record-button {
+      padding: var(--size-3) var(--size-6);
+      border-radius: var(--radius-2);
       border: none;
-      background: #007bff;
+      background: var(--red-5);
       color: white;
+      font-weight: var(--font-weight-6);
       cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: var(--size-2);
     }
-    button:disabled {
-      background: #ccc;
+
+    .record-button:hover:not(:disabled) {
+      background: var(--red-6);
+      transform: translateY(-1px);
+    }
+
+    .record-button:disabled {
+      background: var(--surface-3);
       cursor: not-allowed;
     }
-    button.stop {
-      background: #dc3545;
+
+    .record-button.recording {
+      background: var(--red-6);
+      animation: pulse 1.5s infinite;
     }
-    .status {
-      margin-top: 0.5rem;
-      color: #666;
+
+    .status-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--size-2);
     }
+
+    .recording-status {
+      font-size: var(--font-size-3);
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      gap: var(--size-2);
+    }
+
+    .recording-time {
+      font-family: monospace;
+      font-size: var(--font-size-4);
+      color: var(--text-1);
+    }
+
+    .level-meter {
+      width: 100%;
+      height: 4px;
+      background: var(--surface-3);
+      border-radius: var(--radius-1);
+      overflow: hidden;
+      margin: var(--size-2) 0;
+    }
+
+    .level-bar {
+      height: 100%;
+      background: var(--brand);
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
     .error {
-      color: #dc3545;
+      color: var(--red-9);
+      background: var(--red-2);
+      padding: var(--size-2);
+      border-radius: var(--radius-2);
+      margin-top: var(--size-2);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
     }
   `;
 
   constructor() {
     super();
     this.mediaRecorder = null;
+    this.audioContext = null;
+    this.analyser = null;
     this.isRecording = false;
     this.audioChunks = [];
     this.error = '';
-    this.audioURL = '';
+    this.recordingTime = 0;
+    this.recordingLevel = 0;
+    this.recordingTimer = null;
+    this.analyserInterval = null;
   }
 
   async initializeRecorder() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Set up audio context and analyzer for level metering
+      this.audioContext = new AudioContext();
+      const source = this.audioContext.createMediaStreamSource(stream);
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      source.connect(this.analyser);
       
       this.mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
@@ -65,6 +147,12 @@ export class AudioRecorder extends LitElement {
 
       this.mediaRecorder.onstop = async () => {
         try {
+          // Stop the level meter
+          if (this.analyserInterval) {
+            clearInterval(this.analyserInterval);
+            this.analyserInterval = null;
+          }
+          
           // Create a single blob from all chunks
           const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
           const arrayBuffer = await audioBlob.arrayBuffer();
@@ -88,9 +176,18 @@ export class AudioRecorder extends LitElement {
             detail: {
               chunks: [uint8Array],
               isRecording: false,
-              testUrl
+              testUrl,
+              duration: this.recordingTime
             }
           }));
+
+          // Reset recording state
+          this.recordingTime = 0;
+          this.recordingLevel = 0;
+          if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+          }
         } catch (error) {
           console.error('Error processing recording:', error);
           this.error = 'Error processing recording';
@@ -104,6 +201,19 @@ export class AudioRecorder extends LitElement {
     }
   }
 
+  startLevelMeter() {
+    if (this.analyser) {
+      this.analyserInterval = setInterval(() => {
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average level
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        this.recordingLevel = (average / 255) * 100;
+      }, 100);
+    }
+  }
+
   async startRecording() {
     if (!this.mediaRecorder) {
       await this.initializeRecorder();
@@ -112,7 +222,16 @@ export class AudioRecorder extends LitElement {
     if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
       this.audioChunks = [];
       this.isRecording = true;
+      this.recordingTime = 0;
       this.mediaRecorder.start(100); // Get chunks every 100ms
+      
+      // Start recording timer
+      this.recordingTimer = setInterval(() => {
+        this.recordingTime += 0.1;
+      }, 100);
+      
+      // Start level meter
+      this.startLevelMeter();
     }
   }
 
@@ -120,30 +239,44 @@ export class AudioRecorder extends LitElement {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();
       this.isRecording = false;
+      
+      if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
+      }
     }
+  }
+
+  formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   }
 
   render() {
     return html`
-      <div>
+      <div class="recorder-container">
         <div class="controls">
           <button
-            @click=${this.startRecording}
-            ?disabled=${this.isRecording}
+            class="record-button ${this.isRecording ? 'recording' : ''}"
+            @click=${this.isRecording ? this.stopRecording : this.startRecording}
           >
-            Start Recording
-          </button>
-          <button
-            class="stop"
-            @click=${this.stopRecording}
-            ?disabled=${!this.isRecording}
-          >
-            Stop Recording
+            ${this.isRecording ? '⏹️ Stop Recording' : '🎙️ Start Recording'}
           </button>
         </div>
 
-        <div class="status">
-          ${this.isRecording ? 'Recording...' : 'Not recording'}
+        <div class="status-container">
+          <div class="recording-status">
+            ${this.isRecording ? '🔴 Recording in progress' : 'Ready to record'}
+          </div>
+          
+          ${this.isRecording ? html`
+            <div class="recording-time">${this.formatTime(this.recordingTime)}</div>
+            <div class="level-meter">
+              <div class="level-bar" style="width: ${this.recordingLevel}%"></div>
+            </div>
+          ` : ''}
         </div>
         
         ${this.error ? html`

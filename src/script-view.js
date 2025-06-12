@@ -4,7 +4,9 @@ export class ScriptView extends LitElement {
   static get properties() {
     return {
       dialogue: { type: Array },
-      idx: { type: Number }
+      idx: { type: Number },
+      hasRecording: { type: Boolean, state: true },
+      currentRecording: { type: Object, state: true }
     };
   }
 
@@ -124,6 +126,31 @@ export class ScriptView extends LitElement {
         text-align: center;
         padding: var(--size-2);
       }
+
+      .recording-indicator {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #16a34a;
+        cursor: pointer;
+      }
+
+      .recording-indicator:hover {
+        color: #15803d;
+      }
+
+      .playback-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      audio {
+        width: 100%;
+        margin-top: 0.5rem;
+      }
     `;
   }
 
@@ -131,6 +158,8 @@ export class ScriptView extends LitElement {
     super();
     this.dialogue = [];
     this.idx = 0;
+    this.hasRecording = false;
+    this.currentRecording = null;
     this.linesPerPage = 4;
   }
 
@@ -140,6 +169,34 @@ export class ScriptView extends LitElement {
     }
     if (changedProperties.has('idx')) {
       console.log('Current index updated:', this.idx);
+      this._checkForRecording();
+    }
+  }
+
+  async _checkForRecording() {
+    const recorderApp = document.querySelector('audio-recorder-app');
+    if (recorderApp) {
+      const scriptState = document.querySelector('audio-script-app').scriptState;
+      const currentLine = this.dialogue[this.idx];
+      
+      if (currentLine) {
+        const recording = recorderApp.getRecordingForLine(
+          scriptState.state.title,
+          scriptState.state.act,
+          scriptState.state.scene,
+          this.idx
+        );
+        
+        this.hasRecording = !!recording;
+        this.currentRecording = recording;
+      }
+    }
+  }
+
+  _handlePlayback() {
+    if (this.currentRecording) {
+      const audio = new Audio(this.currentRecording.audioUrl);
+      audio.play();
     }
   }
 
@@ -173,6 +230,14 @@ export class ScriptView extends LitElement {
             >
               <div class="character">${item.character || 'Unknown'}</div>
               <div class="lines">${item.lines || ''}</div>
+              ${actualIndex === this.idx && this.hasRecording ? html`
+                <div class="recording-indicator" @click=${this._handlePlayback}>
+                  🔊 Play Recording
+                </div>
+                <div class="playback-controls">
+                  <audio controls src="${this.currentRecording?.audioUrl || ''}"></audio>
+                </div>
+              ` : ''}
             </div>
           `;
         })}
