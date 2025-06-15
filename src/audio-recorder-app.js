@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import './audio-recorder.js';
-import './audio-ipfs-uploader.js';
 import { storageService } from './services/storage-service.js';
+import { ipfsService } from './services/ipfs-uploader.js';
 
 export class AudioRecorderApp extends LitElement {
   static properties = {
@@ -127,6 +127,19 @@ export class AudioRecorderApp extends LitElement {
     this.scriptContext = null;
     this.currentLineRecordings = [];
     this._loadRecordings();
+    this._initializeIpfs();
+  }
+
+  async _initializeIpfs() {
+    try {
+      const initialized = await ipfsService.initialize();
+      if (!initialized) {
+        this.currentStatus = 'Error: Failed to initialize IPFS service';
+      }
+    } catch (error) {
+      console.error('Failed to initialize IPFS:', error);
+      this.currentStatus = 'Error: Failed to initialize IPFS service';
+    }
   }
 
   setScriptContext(context) {
@@ -227,38 +240,55 @@ export class AudioRecorderApp extends LitElement {
     const recording = this.recordings.find(rec => rec.id === recordingId);
     if (!recording || recording.ipfsStatus === 'uploading') return;
 
-    this.selectedRecording = recording;
-    const uploader = this.shadowRoot.querySelector('ipfs-audio-uploader');
-    if (!uploader) {
-      this.currentStatus = 'Error: IPFS uploader not initialized';
-      return;
-    }
-
     try {
       recording.ipfsStatus = 'uploading';
-      
-      await uploader.setAudioData(recording.chunks);
       this.currentStatus = 'Uploading to IPFS...';
+      // Force UI update for uploading state
+      this.requestUpdate();
+
+      // Convert chunks to a single ArrayBuffer
+      const audioData = await this._combineChunks(recording.chunks);
+      
+      // Upload to IPFS with progress tracking
+      const { cid, audioUrl } = await ipfsService.uploadAudio(audioData, (progress) => {
+        this.currentStatus = `Uploading to IPFS: ${progress}%`;
+        this.requestUpdate();
+      });
+
+      // Update recording with IPFS data
+      recording.cid = cid;
+      recording.gatewayUrl = `${ipfsService.gateway}${cid}`;
+      recording.ipfsStatus = 'uploaded';
+      
+      // Save updated recording to IndexedDB
+      await storageService.saveRecording(recording);
+      
+      // Update the recordings array to trigger UI update
+      this.recordings = [...this.recordings];
+      this.currentLineRecordings = [...this.currentLineRecordings];
+      
+      this.currentStatus = 'Successfully saved to IPFS';
+      this.requestUpdate();
     } catch (error) {
+      console.error('IPFS upload failed:', error);
       recording.ipfsStatus = 'failed';
       this.currentStatus = `Error: ${error.message}`;
+      this.requestUpdate();
     }
   }
 
-  handleUploadComplete(e) {
-    const { cid, gatewayUrl } = e.detail;
-    if (this.selectedRecording) {
-      this.selectedRecording.cid = cid;
-      this.selectedRecording.gatewayUrl = gatewayUrl;
-      this.selectedRecording.ipfsStatus = 'uploaded';
-      this.currentStatus = 'Successfully saved to IPFS';
-      this.selectedRecording = null;
+  async _combineChunks(chunks) {
+    // Combine all chunks into a single ArrayBuffer
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
+    const combinedBuffer = new Uint8Array(totalLength);
+    let offset = 0;
+    
+    for (const chunk of chunks) {
+      combinedBuffer.set(new Uint8Array(chunk), offset);
+      offset += chunk.byteLength;
     }
-  }
-
-  handleUploadError(e) {
-    const { message } = e.detail;
-    this.currentStatus = `Error: ${message}`;
+    
+    return combinedBuffer.buffer;
   }
 
   handleStatusUpdate(e) {
@@ -280,14 +310,6 @@ export class AudioRecorderApp extends LitElement {
           <audio-recorder
             @recording-complete=${this.handleRecordingComplete}
           ></audio-recorder>
-
-          <!-- Hidden IPFS Uploader Component -->
-          <ipfs-audio-uploader
-            gateway="https://ipfs.io/ipfs/"
-            @upload-complete=${this.handleUploadComplete}
-            @upload-error=${this.handleUploadError}
-            style="display: none;"
-          ></ipfs-audio-uploader>
 
           <!-- Current Line Recordings -->
           ${this.currentLineRecordings.length > 0 ? html`
