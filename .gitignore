@@ -25,3 +25,6 @@ temp
 *.sw?
 package-lock.json
 README_AI.md
+
+# Secrets
+.env
